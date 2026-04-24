@@ -604,6 +604,23 @@ mod test {
     }
 
     #[test]
+    fn moov_truncated() {
+        init_logger();
+
+        let mut data = vec![];
+        test_ftyp().build().put_buf(&mut data);
+        write_test_mdat(&mut data, b"");
+
+        // moov header claims 900 MiB of body, but only 4 bytes follow.
+        BoxHeader::with_u32_data_size(MOOV, 900 * 1024 * 1024).put_buf(&mut data);
+        data.extend_from_slice(&[0u8; 4]);
+
+        assert_matches!(sanitize(io::Cursor::new(&data)).unwrap_err(), Error::Parse(err) => {
+            assert_matches!(err.into_inner(), ParseError::TruncatedBox);
+        });
+    }
+
+    #[test]
     fn ftyp_too_large() {
         let mut compatible_brands = vec![];
         while compatible_brands.len() * COMPATIBLE_BRAND.value.len() < MAX_FTYP_SIZE as usize {

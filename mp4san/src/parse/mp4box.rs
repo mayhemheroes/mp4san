@@ -84,10 +84,16 @@ impl<T: ParsedBox + ?Sized> Mp4Box<T> {
         R: AsyncRead + AsyncSkip,
         T: ParseBox,
     {
+        let reader_remaining = reader.as_mut().stream_len().await? - reader.as_mut().stream_position().await?;
         let box_data_size = match header.box_data_size()? {
             Some(box_data_size) => box_data_size,
-            None => reader.as_mut().stream_len().await? - reader.as_mut().stream_position().await?,
+            None => reader_remaining,
         };
+        ensure_attach!(
+            box_data_size <= reader_remaining,
+            ParseError::TruncatedBox,
+            WhileParsingBox(header.box_type()),
+        );
 
         ensure_attach!(
             box_data_size <= max_size,
