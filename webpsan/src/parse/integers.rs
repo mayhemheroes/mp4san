@@ -174,6 +174,11 @@ impl<const LEN: u32> WebmPrim for Reserved<LEN> {
     const ENCODED_LEN: u32 = LEN;
 
     fn parse<B: Buf>(mut buf: B) -> Result<Self, ParseError> {
+        ensure_attach!(
+            buf.remaining() >= Self::ENCODED_LEN as usize,
+            ParseError::TruncatedChunk,
+            WhileParsingType::new::<Self>(),
+        );
         for _ in 0..LEN {
             ensure_attach!(
                 buf.get_u8() == 0,
@@ -189,5 +194,24 @@ impl<const LEN: u32> WebmPrim for Reserved<LEN> {
         for _ in 0..LEN {
             buf.put_u8(0);
         }
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use bytes::BytesMut;
+
+    use super::*;
+
+    #[test]
+    fn reserved_truncated() {
+        let err = Reserved::<3>::parse(&mut BytesMut::from(&[0, 0][..])).unwrap_err();
+        assert!(matches!(err.get_ref(), ParseError::TruncatedChunk), "{err}");
+    }
+
+    #[test]
+    fn reserved_truncated_empty() {
+        let err = Reserved::<1>::parse(&mut BytesMut::new()).unwrap_err();
+        assert!(matches!(err.get_ref(), ParseError::TruncatedChunk), "{err}");
     }
 }
