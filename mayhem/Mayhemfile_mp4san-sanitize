@@ -1,0 +1,8 @@
+project: mp4san
+target: mp4san-sanitize
+testsuite:
+  - https://$MAYHEM_DOMAIN/$MAYHEM_PROJECT/$MAYHEM_TARGET/testsuite.tar
+  - file://mayhem/mp4san-sanitize/testsuite
+cmds:
+  - cmd: /mayhem/mp4san-sanitize
+    libfuzzer: true
